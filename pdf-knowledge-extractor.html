@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Knowledge Extractor</title>
+
+  <!-- Required CDN scripts (cdnjs.cloudflare.com only) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --bg-surface: #F7F7F5;
+      --bg-surface-2: #EFEFEC;
+      --text-primary: #1A1A18;
+      --text-secondary: #6B6B66;
+      --text-muted: #9B9B94;
+      --border: rgba(0,0,0,0.10);
+      --border-focus: rgba(0,0,0,0.25);
+      --accent: #5B4FD9;
+      --accent-light: #EEEDFE;
+      --accent-text: #3B31A8;
+      --green: #0F6E56;
+      --green-light: #E1F5EE;
+      --amber: #854F0B;
+      --amber-light: #FAEEDA;
+      --coral: #993C1D;
+      --coral-light: #FAECE7;
+      --red-light: #FCEBEB;
+      --red: #A32D2D;
+      --progress-fill: #5B4FD9;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .app {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* Header */
+    .app-title {
+      font-size: 22px;
+      font-weight: 500;
+      margin: 0 0 6px 0;
+    }
+    .app-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0 0 24px 0;
+    }
+
+    /* Sections */
+    .section { margin-bottom: 24px; }
+    .field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .helper-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Inputs */
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--border-focus);
+    }
+    textarea { resize: vertical; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 10px;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-ghost:hover { border-color: var(--border-focus); }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg-surface);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .upload-zone-title { font-size: 14px; font-weight: 500; }
+    .upload-zone-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .file-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .file-badge .file-name { font-weight: 500; }
+    .file-badge .file-size {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .file-badge .remove-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+
+    /* Focus controls */
+    .focus-grid {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .focus-col { flex: 1; min-width: 200px; }
+    .page-range-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-range-inputs input { width: 80px; }
+    .page-range-inputs .to-label { font-size: 13px; color: var(--text-muted); }
+
+    .range-pill {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent-text);
+      font-size: 11px;
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-top: 8px;
+    }
+    .inline-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .section-sublabel {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Progress / loading */
+    .progress-section { margin-top: 8px; }
+    .progress-label {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    .progress-track {
+      background: var(--bg-surface-2);
+      border-radius: 20px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .progress-fill {
+      background: var(--progress-fill);
+      height: 100%;
+      width: 0%;
+      border-radius: 20px;
+      transition: width 0.5s ease;
+    }
+    .step-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .step-pill {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--bg-surface-2);
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .step-pill.active {
+      background: var(--accent-light);
+      color: var(--accent-text);
+    }
+    .step-pill.done {
+      background: var(--green-light);
+      color: var(--green);
+    }
+
+    /* Error banner */
+    .error-banner {
+      background: var(--red-light);
+      color: var(--red);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .error-banner .dismiss {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--red);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    /* Summary bar (results) */
+    .summary-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .summary-bar .summary-info { font-size: 13px; color: var(--text-secondary); }
+    .summary-bar .summary-info strong { color: var(--text-primary); }
+    .summary-bar .start-over { margin-left: auto; }
+
+    /* Book meta bar */
+    .book-meta {
+      margin-bottom: 20px;
+    }
+    .book-meta .book-title { font-size: 18px; font-weight: 500; margin: 0 0 4px 0; }
+    .book-meta .core-theme { font-size: 14px; color: var(--text-secondary); margin: 0; }
+    .focus-badge {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent-text);
+      font-size: 11px;
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-top: 8px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-secondary);
+      cursor: pointer;
+      margin-bottom: -1px;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 500;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      border-radius: 6px;
+      padding: 3px 8px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .badge-takeaway { background: var(--accent-light); color: var(--accent-text); }
+    .badge-howto { background: var(--green-light); color: var(--green); }
+    .badge-visual { background: var(--amber-light); color: var(--amber); }
+    .badge-summary { background: var(--coral-light); color: var(--coral); }
+    .badge-personalized {
+      background: var(--coral-light);
+      color: var(--coral);
+      text-transform: none;
+      letter-spacing: 0.02em;
+      margin-bottom: 0;
+      margin-left: 8px;
+      padding: 2px 8px;
+    }
+
+    .card-title { font-size: 14px; font-weight: 500; margin: 0 0 6px 0; }
+    .card-text { font-size: 14px; color: var(--text-secondary); margin: 0; }
+    .card-text + .card-text { margin-top: 8px; }
+    .card-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .use-case {
+      font-size: 12px;
+      font-style: italic;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* LinkedIn draft panels */
+    .draft-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .draft-inner { padding: 16px 20px; }
+    .draft-label { font-size: 13px; font-weight: 500; margin-bottom: 10px; }
+    .post-area {
+      white-space: pre-wrap;
+      min-height: 120px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      outline: none;
+      transition: opacity 0.2s;
+    }
+    .post-area:focus { border-color: var(--border-focus); }
+    .post-area.dimmed { opacity: 0.45; }
+    .draft-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Angle editor */
+    .angle-editor {
+      display: none;
+      background: var(--bg-surface-2);
+      border-top: 2px solid var(--accent-light);
+      border-radius: 0 0 12px 12px;
+      padding: 14px 16px;
+    }
+    .angle-editor.open { display: block; }
+    .angle-editor-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .angle-editor .angle-question { font-size: 13px; margin-bottom: 8px; }
+    .angle-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .angle-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 8px;
+      display: none;
+    }
+    .angle-error.show { display: block; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Summary & infographic tab */
+    .block-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .block-head .card-title { margin: 0; }
+    .block-head .inline-copy { margin-left: auto; padding: 6px 12px; }
+    .summary-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      outline: none;
+      border-radius: 6px;
+    }
+    .summary-text:focus { box-shadow: 0 0 0 2px var(--accent-light); }
+    .prompt-box {
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: var(--text-primary);
+      outline: none;
+    }
+    .prompt-box:focus { border-color: var(--border-focus); }
+    .prompt-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <h1 class="app-title">PDF Knowledge Extractor</h1>
+    <p class="app-subtitle">Upload a business or product PDF — get structured insights and LinkedIn drafts, ready for your personal touch.</p>
+
+    <!-- ============ SETUP STATE ============ -->
+    <div id="setup-state">
+
+      <!-- API Key -->
+      <div class="section">
+        <label class="field-label" for="api-key">Anthropic API key</label>
+        <input type="password" id="api-key" placeholder="sk-ant-...">
+        <div class="helper-text">Your key is used only in this session and never stored.</div>
+      </div>
+
+      <!-- Upload zone -->
+      <div class="section">
+        <label class="field-label">PDF document</label>
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-zone-title">Click to browse or drag &amp; drop a PDF</div>
+          <div class="upload-zone-sub">PDF files only</div>
+        </div>
+        <input type="file" id="file-input" accept="application/pdf,.pdf" class="hidden">
+        <div id="file-badge-wrap"></div>
+        <div class="helper-text" id="page-count-text"></div>
+        <div class="helper-text" id="file-size-warning" style="color: var(--amber);"></div>
+        <div class="inline-error" id="file-type-error"></div>
+      </div>
+
+      <!-- Focus controls -->
+      <div class="section">
+        <div class="section-sublabel">Focus on a specific section (optional)</div>
+        <div class="helper-text" style="margin-top:2px; margin-bottom:12px;">Leave blank to analyze the full document.</div>
+        <div class="focus-grid">
+          <div class="focus-col">
+            <label class="field-label">Page range</label>
+            <div class="page-range-inputs">
+              <span class="to-label">From page</span>
+              <input type="number" id="page-from" min="1" placeholder="—">
+              <span class="to-label">to</span>
+              <input type="number" id="page-to" min="1" placeholder="—">
+            </div>
+            <div class="inline-error" id="page-range-error"></div>
+            <div id="range-pill-wrap"></div>
+          </div>
+          <div class="focus-col">
+            <label class="field-label" for="section-name">Section or chapter name</label>
+            <input type="text" id="section-name" placeholder="e.g. Chapter 4: Retention Metrics">
+          </div>
+        </div>
+      </div>
+
+      <!-- Context fields -->
+      <div class="section">
+        <div class="two-col">
+          <div>
+            <label class="field-label" for="topic">Topic focus</label>
+            <select id="topic">
+              <option>Product Management</option>
+              <option>Product Analytics</option>
+              <option>Business Strategy</option>
+              <option>Growth &amp; Marketing</option>
+              <option>Leadership</option>
+              <option>General Business</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="audience">LinkedIn audience</label>
+            <select id="audience">
+              <option>Product managers</option>
+              <option>Startup founders</option>
+              <option>Data &amp; analytics pros</option>
+              <option>Business leaders</option>
+              <option>General professionals</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analyze button / loading -->
+      <div class="section">
+        <button class="btn-primary" id="analyze-btn" disabled>Analyze PDF</button>
+
+        <!-- Loading progress (hidden until analysis) -->
+        <div class="progress-section hidden" id="progress-section">
+          <div class="progress-label" id="progress-label">Preparing PDF...</div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="step-pills" id="step-pills"></div>
+        </div>
+
+        <!-- Error banner -->
+        <div id="error-banner-wrap"></div>
+      </div>
+    </div>
+
+    <!-- ============ RESULTS STATE ============ -->
+    <div id="results-state" class="hidden">
+      <div class="summary-bar" id="summary-bar"></div>
+      <div class="book-meta" id="book-meta"></div>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="takeaways">Takeaways</button>
+        <button class="tab" data-tab="howtos">Tactical How-Tos</button>
+        <button class="tab" data-tab="visuals">Visual Insights</button>
+        <button class="tab" data-tab="drafts">LinkedIn Drafts</button>
+        <button class="tab" data-tab="summary">Summary &amp; Infographic</button>
+      </div>
+      <div class="tab-panel active" id="panel-takeaways"></div>
+      <div class="tab-panel" id="panel-howtos"></div>
+      <div class="tab-panel" id="panel-visuals"></div>
+      <div class="tab-panel" id="panel-drafts"></div>
+      <div class="tab-panel" id="panel-summary"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Module-scope state =====
+    let apiKey = '';
+    let selectedFile = null;
+    let totalPages = null;
+    let pdfBase64 = null;
+    let results = null;
+    let usedPageRange = null;   // { from, to } when extraction was used
+    let usedSectionName = null;
+    let progressTimers = [];
+
+    const WORKER_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // ===== Element refs =====
+    const apiKeyInput = document.getElementById('api-key');
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileBadgeWrap = document.getElementById('file-badge-wrap');
+    const pageCountText = document.getElementById('page-count-text');
+    const fileSizeWarning = document.getElementById('file-size-warning');
+    const fileTypeError = document.getElementById('file-type-error');
+    const pageFromInput = document.getElementById('page-from');
+    const pageToInput = document.getElementById('page-to');
+    const pageRangeError = document.getElementById('page-range-error');
+    const rangePillWrap = document.getElementById('range-pill-wrap');
+    const sectionNameInput = document.getElementById('section-name');
+    const topicSelect = document.getElementById('topic');
+    const audienceSelect = document.getElementById('audience');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const progressSection = document.getElementById('progress-section');
+    const progressLabel = document.getElementById('progress-label');
+    const progressFill = document.getElementById('progress-fill');
+    const stepPillsEl = document.getElementById('step-pills');
+    const errorBannerWrap = document.getElementById('error-banner-wrap');
+    const setupState = document.getElementById('setup-state');
+    const resultsState = document.getElementById('results-state');
+
+    // ===== API key handling =====
+    apiKeyInput.addEventListener('input', () => {
+      apiKey = apiKeyInput.value.trim();
+      updateAnalyzeButton();
+    });
+
+    function updateAnalyzeButton() {
+      analyzeBtn.disabled = !(apiKey && selectedFile);
+    }
+
+    // ===== File selection =====
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => {
+      if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    ['dragenter', 'dragover'].forEach(evt =>
+      uploadZone.addEventListener(evt, e => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+      })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+      uploadZone.addEventListener(evt, e => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+      })
+    );
+    uploadZone.addEventListener('drop', e => {
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    });
+
+    async function handleFile(file) {
+      fileTypeError.textContent = '';
+      const isPdf = file.type === 'application/pdf' ||
+                    file.name.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        fileTypeError.textContent = 'Please select a PDF file.';
+        return;
+      }
+
+      selectedFile = file;
+      totalPages = null;
+      pdfBase64 = null;
+      renderFileBadge();
+      updateAnalyzeButton();
+
+      // file size warning (non-blocking)
+      if (file.size > 30 * 1024 * 1024) {
+        fileSizeWarning.textContent = 'Heads up: this file is larger than 30MB and may be slow or exceed limits.';
+      } else {
+        fileSizeWarning.textContent = '';
+      }
+
+      // page count
+      pageCountText.textContent = 'Reading page count…';
+      try {
+        totalPages = await getPdfPageCount(file);
+        pageCountText.textContent = totalPages + ' pages total';
+      } catch (err) {
+        pageCountText.textContent = '';
+        console.error('Page count failed', err);
+      }
+    }
+
+    function renderFileBadge() {
+      if (!selectedFile) { fileBadgeWrap.innerHTML = ''; return; }
+      const sizeKb = selectedFile.size / 1024;
+      const sizeLabel = sizeKb > 1024
+        ? (sizeKb / 1024).toFixed(1) + ' MB'
+        : Math.round(sizeKb) + ' KB';
+      fileBadgeWrap.innerHTML = '';
+      const badge = document.createElement('div');
+      badge.className = 'file-badge';
+      const name = document.createElement('span');
+      name.className = 'file-name';
+      name.textContent = selectedFile.name;
+      const size = document.createElement('span');
+      size.className = 'file-size';
+      size.textContent = sizeLabel;
+      const remove = document.createElement('button');
+      remove.className = 'remove-btn';
+      remove.textContent = '×';
+      remove.title = 'Remove file';
+      remove.addEventListener('click', removeFile);
+      badge.appendChild(name);
+      badge.appendChild(size);
+      badge.appendChild(remove);
+      fileBadgeWrap.appendChild(badge);
+    }
+
+    function removeFile() {
+      selectedFile = null;
+      totalPages = null;
+      pdfBase64 = null;
+      fileInput.value = '';
+      fileBadgeWrap.innerHTML = '';
+      pageCountText.textContent = '';
+      fileSizeWarning.textContent = '';
+      validatePageRangeUI();
+      updateAnalyzeButton();
+    }
+
+    async function getPdfPageCount(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC;
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      return pdf.numPages;
+    }
+
+    // ===== Page range validation =====
+    function validatePageRange(from, to, totalPages) {
+      if (from && (isNaN(from) || from < 1 || from > totalPages))
+        return `"From" page must be between 1 and ${totalPages}.`;
+      if (to && (isNaN(to) || to < 1 || to > totalPages))
+        return `"To" page must be between 1 and ${totalPages}.`;
+      if (from && to && parseInt(from) > parseInt(to))
+        return '"From" page must be less than or equal to "To" page.';
+      return null;
+    }
+
+    pageFromInput.addEventListener('blur', validatePageRangeUI);
+    pageToInput.addEventListener('blur', validatePageRangeUI);
+    pageFromInput.addEventListener('input', validatePageRangeUI);
+    pageToInput.addEventListener('input', validatePageRangeUI);
+
+    function getRangeValues() {
+      const from = pageFromInput.value ? parseInt(pageFromInput.value, 10) : null;
+      const to = pageToInput.value ? parseInt(pageToInput.value, 10) : null;
+      return { from, to };
+    }
+
+    // Returns resolved {from, to} when a range is in play, else null
+    function resolveRange() {
+      let { from, to } = getRangeValues();
+      if (!from && !to) return null;
+      if (from && !to) to = totalPages;       // from page to end
+      if (!from && to) from = 1;              // page 1 to that page
+      return { from, to };
+    }
+
+    function validatePageRangeUI() {
+      const { from, to } = getRangeValues();
+      rangePillWrap.innerHTML = '';
+      pageRangeError.textContent = '';
+
+      if (!from && !to) return true;
+
+      const tp = totalPages || Infinity;
+      const err = validatePageRange(from, to, tp);
+      if (err) {
+        pageRangeError.textContent = err;
+        return false;
+      }
+
+      const resolved = resolveRange();
+      if (resolved && totalPages) {
+        const count = resolved.to - resolved.from + 1;
+        const pill = document.createElement('span');
+        pill.className = 'range-pill';
+        pill.textContent = `Pages ${resolved.from}–${resolved.to} selected (${count} pages)`;
+        rangePillWrap.appendChild(pill);
+      }
+      return true;
+    }
+
+    // ===== PDF extraction =====
+    async function extractPageRange(file, fromPage, toPage) {
+      const arrayBuffer = await file.arrayBuffer();
+      const originalPdf = await PDFLib.PDFDocument.load(arrayBuffer);
+      const total = originalPdf.getPageCount();
+
+      const start = Math.max(1, fromPage) - 1;
+      const end = Math.min(total, toPage) - 1;
+
+      const newPdf = await PDFLib.PDFDocument.create();
+      const pageIndices = [];
+      for (let i = start; i <= end; i++) pageIndices.push(i);
+
+      const copiedPages = await newPdf.copyPages(originalPdf, pageIndices);
+      copiedPages.forEach(page => newPdf.addPage(page));
+
+      const pdfBytes = await newPdf.save();
+
+      let binary = '';
+      for (let i = 0; i < pdfBytes.length; i++) {
+        binary += String.fromCharCode(pdfBytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    async function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ===== User message =====
+    function buildUserMessage(topic, sectionName, pageRange) {
+      let msg = `Analyze this PDF thoroughly — including all visuals, graphs, diagrams, and images — and return the structured JSON as specified. Topic focus: ${topic}.`;
+      if (pageRange) {
+        msg += ` Note: this document is an extract of pages ${pageRange.from}–${pageRange.to} from the original.`;
+      }
+      if (sectionName) {
+        msg += ` Focus your analysis specifically on the section titled "${sectionName}". If this section is not clearly identifiable, focus on the most relevant content to that topic.`;
+      }
+      return msg;
+    }
+
+    // ===== System prompt =====
+    function buildSystemPrompt(topic, audience) {
+      return `You are an expert business book analyst and LinkedIn content strategist with deep expertise in ${topic}.
+
+Your job is to analyze the uploaded PDF — which may be a workbook, book, research report, or reference guide — and extract structured, actionable intelligence for a professional building their personal brand on LinkedIn.
+
+Analyze ALL content: text, graphs, charts, diagrams, frameworks, images, and tables. For each visual element you encounter, describe what it communicates and what action it implies.
+
+Return ONLY a valid JSON object. No preamble, no explanation, no markdown code fences. The JSON must exactly follow this schema:
+
+{
+  "book_title": "string — inferred title of the document",
+  "core_theme": "string — one sentence summarizing the document's central argument or purpose",
+  "takeaways": [
+    {
+      "title": "string — short punchy name for this insight (5–8 words)",
+      "insight": "string — 2–3 sentences explaining the insight and why it matters in practice"
+    }
+  ],
+  "tactical_howtos": [
+    {
+      "title": "string — action-oriented title (e.g. 'How to define your north star metric')",
+      "steps": "string — concise paragraph describing the process, grounded in the book's content",
+      "use_case": "string — one sentence: when should someone apply this?"
+    }
+  ],
+  "visual_insights": [
+    {
+      "title": "string — name of the chart, diagram, or framework",
+      "what_it_shows": "string — what the visual communicates or represents",
+      "actionable_lesson": "string — what a reader should do or think differently based on this visual"
+    }
+  ],
+  "linkedin_drafts": [
+    {
+      "hook": "string — first line only; stops the scroll; specific and concrete, never generic",
+      "body": "string — 3–5 short paragraphs separated by \\n\\n; substance grounded in the content; conversational, first-person, direct",
+      "cta": "string — one closing line; invites reflection, asks a question, or suggests an action"
+    }
+  ],
+  "executive_summary": "string — a tight 120–200 word summary that encapsulates the main takeaways of the analyzed content (the specified chapter, section, or page range if one was given). Written so a busy professional grasps the core, actionable value without reading the source. Concrete and grounded in the content — no generic filler.",
+  "infographic_prompt": "string — a complete, ready-to-paste AI image-generation prompt (for ChatGPT / GPT-4o images, DALL·E, or similar) that produces a visual infographic communicating the main takeaways. See the rules below for exactly what it must contain."
+}
+
+Rules:
+- takeaways: 5–8 items. Reference actual frameworks, models, chapter names, or numbers from the content. No generic business advice.
+- tactical_howtos: 4–6 items. Each must be directly implementable, not abstract.
+- visual_insights: 3–5 items. If the document contains no visuals or charts, include a single entry with title "Text-only document" explaining no embedded visuals were found.
+- linkedin_drafts: exactly 3 drafts, each targeting ${audience}. Clear, direct, opinionated, first-person voice. No hollow buzzwords ("game-changer", "revolutionize", "unlock", "supercharge"). Each draft takes a different angle: draft 1 shares a key lesson, draft 2 challenges a common assumption, draft 3 breaks down a framework or how-to.
+- executive_summary: one string. Capture the single most important through-line plus the 3–5 key takeaways in plain language. If a page range or section was specified, summarize THAT content specifically — not the whole book.
+- infographic_prompt: one self-contained prompt string that can be pasted directly into an AI image generator. It MUST: (1) specify a LinkedIn-optimized portrait or square format that stands out in-feed (e.g. 4:5 portrait, 1080×1350, or 1:1 square); (2) describe a clean, modern, tactical infographic that lays out the main takeaways as a simple, scannable, numbered or step-by-step framework others can follow and implement; (3) name the concrete takeaways/steps drawn from THIS content, so the image reflects the actual material rather than generic business art; (4) define a clear visual hierarchy — one bold headline, 3–5 short labelled sections or steps, simple icons, and generous whitespace; (5) call for minimal on-image text (short labels only), high contrast, a restrained professional color palette, and a legible sans-serif typeface; (6) explicitly avoid clutter, stock-photo people, buzzwords, and dense paragraphs. Write it as one flowing paragraph of instruction text, ready to copy.
+
+All content must be grounded in the actual PDF — no invented content, no generic filler.`;
+    }
+
+    function buildPersonalizationPrompt(currentText, userAngle) {
+      return `Here is a LinkedIn post draft based on a business PDF I analyzed:\n\n---\n${currentText}\n---\n\nHere is my personal angle I want woven in:\n\n"${userAngle}"\n\nRewrite the post incorporating my perspective. Keep the same structure (hook, body, CTA). Keep it first-person, direct, and concrete. Do not use hollow buzzwords. Return only the rewritten post text — no explanation, no preamble, no quotation marks around the whole thing.`;
+    }
+
+    // ===== Progress simulation =====
+    const steps = [
+      { id: 's1', label: 'Preparing PDF...', pct: 10 },
+      { id: 's2', label: 'Reading content...', pct: 30 },
+      { id: 's3', label: 'Extracting insights...', pct: 55 },
+      { id: 's4', label: 'Analyzing visuals...', pct: 75 },
+      { id: 's5', label: 'Drafting LinkedIn posts...', pct: 90 },
+    ];
+    const stepLabels = ['Preparing PDF', 'Reading content', 'Extracting insights', 'Analyzing visuals', 'Drafting posts'];
+
+    function renderStepPills() {
+      stepPillsEl.innerHTML = '';
+      stepLabels.forEach((label, i) => {
+        const pill = document.createElement('span');
+        pill.className = 'step-pill';
+        pill.id = 'step-pill-' + i;
+        pill.textContent = label;
+        stepPillsEl.appendChild(pill);
+      });
+    }
+
+    function setStepState(index, state) {
+      const pill = document.getElementById('step-pill-' + index);
+      if (!pill) return;
+      pill.classList.remove('active', 'done');
+      if (state) pill.classList.add(state);
+    }
+
+    function startProgress() {
+      clearProgressTimers();
+      renderStepPills();
+      progressSection.classList.remove('hidden');
+      analyzeBtn.classList.add('hidden');
+      progressFill.style.width = steps[0].pct + '%';
+      progressLabel.textContent = steps[0].label;
+      setStepState(0, 'active');
+    }
+
+    // Begin simulated steps 2-5 (called after real step 1 completes)
+    function advanceSimulatedSteps() {
+      setStepState(0, 'done');
+      let i = 1;
+      function next() {
+        if (i >= steps.length) return;
+        // mark previous active as done
+        for (let j = 0; j < i; j++) setStepState(j, 'done');
+        setStepState(i, 'active');
+        progressFill.style.width = steps[i].pct + '%';
+        progressLabel.textContent = steps[i].label;
+        i++;
+        if (i < steps.length) {
+          progressTimers.push(setTimeout(next, 900));
+        }
+      }
+      progressTimers.push(setTimeout(next, 900));
+    }
+
+    function finishProgress() {
+      clearProgressTimers();
+      steps.forEach((_, i) => setStepState(i, 'done'));
+      progressFill.style.width = '100%';
+      progressLabel.textContent = 'Done';
+    }
+
+    function clearProgressTimers() {
+      progressTimers.forEach(t => clearTimeout(t));
+      progressTimers = [];
+    }
+
+    function resetProgressUI() {
+      clearProgressTimers();
+      progressSection.classList.add('hidden');
+      analyzeBtn.classList.remove('hidden');
+      progressFill.style.width = '0%';
+      stepPillsEl.innerHTML = '';
+    }
+
+    // ===== Error banner =====
+    function showErrorBanner(message) {
+      errorBannerWrap.innerHTML = '';
+      const banner = document.createElement('div');
+      banner.className = 'error-banner';
+      const text = document.createElement('span');
+      text.textContent = message;
+      const dismiss = document.createElement('button');
+      dismiss.className = 'dismiss';
+      dismiss.textContent = '×';
+      dismiss.addEventListener('click', () => { errorBannerWrap.innerHTML = ''; });
+      banner.appendChild(text);
+      banner.appendChild(dismiss);
+      errorBannerWrap.appendChild(banner);
+    }
+
+    function clearErrorBanner() { errorBannerWrap.innerHTML = ''; }
+
+    // ===== Analyze flow =====
+    analyzeBtn.addEventListener('click', runAnalysis);
+
+    async function runAnalysis() {
+      clearErrorBanner();
+
+      // Validation
+      if (!apiKey) { showErrorBanner('Please enter your Anthropic API key.'); return; }
+      if (!selectedFile) { showErrorBanner('Please upload a PDF first.'); return; }
+
+      const { from, to } = getRangeValues();
+      if (from || to) {
+        const err = validatePageRange(from, to, totalPages || Infinity);
+        if (err) { showErrorBanner(err); return; }
+      }
+      const pageRange = resolveRange();
+      if (pageRange && totalPages && pageRange.to > totalPages) {
+        showErrorBanner(`Page range exceeds document length (${totalPages} pages). Adjust and try again.`);
+        return;
+      }
+
+      const sectionName = sectionNameInput.value.trim() || null;
+      const topic = topicSelect.value;
+      const audience = audienceSelect.value;
+
+      startProgress();
+
+      // Step 1 (real): prepare PDF base64
+      let base64;
+      try {
+        if (pageRange) {
+          base64 = await extractPageRange(selectedFile, pageRange.from, pageRange.to);
+        } else {
+          base64 = await fileToBase64(selectedFile);
+        }
+      } catch (e) {
+        console.error('Extraction failed', e);
+        resetProgressUI();
+        showErrorBanner("Couldn't extract those pages. Try a different range or analyze the full document.");
+        return;
+      }
+      pdfBase64 = base64;
+      console.log('PDF base64 length:', base64.length, pageRange ? '(extracted range)' : '(full file)');
+
+      // Steps 2-5 simulated
+      advanceSimulatedSteps();
+
+      // Primary API call
+      try {
+        const result = await callPrimaryApi(base64, topic, audience, sectionName, pageRange);
+        finishProgress();
+        results = result;
+        usedPageRange = pageRange;
+        usedSectionName = sectionName;
+        setTimeout(() => goToResults(), 300);
+      } catch (e) {
+        console.error('Analysis failed', e);
+        finishProgress();
+        setTimeout(() => {
+          resetProgressUI();
+          showErrorBanner(e.message || 'Something went wrong. Try again.');
+        }, 300);
+      }
+    }
+
+    async function callPrimaryApi(base64, topic, audience, sectionName, pageRange) {
+      const system = buildSystemPrompt(topic, audience);
+      const userMessage = buildUserMessage(topic, sectionName, pageRange);
+
+      let response;
+      try {
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-opus-4-5',
+            max_tokens: 5000,
+            system: system,
+            messages: [{
+              role: 'user',
+              content: [
+                {
+                  type: 'document',
+                  source: {
+                    type: 'base64',
+                    media_type: 'application/pdf',
+                    data: base64
+                  }
+                },
+                { type: 'text', text: userMessage }
+              ]
+            }]
+          })
+        });
+      } catch (netErr) {
+        throw new Error('Network error. Check your connection and try again.');
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) throw new Error('Invalid API key. Check your key and try again.');
+        if (response.status === 429) throw new Error('Rate limited. Wait a moment and try again.');
+        let bodyMsg = '';
+        try { const ej = await response.json(); bodyMsg = ej.error?.message || ''; } catch (e) {}
+        if (response.status === 413 || /too large|max_tokens|exceed|context/i.test(bodyMsg)) {
+          throw new Error('This content may be too large for a single analysis. Try a narrower page range.');
+        }
+        throw new Error('This content may be too large for a single analysis. Try a narrower page range.');
+      }
+
+      const data = await response.json();
+      if (data.stop_reason === 'max_tokens') {
+        // still attempt to parse, but likely truncated
+      }
+
+      const raw = data.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('');
+
+      const clean = raw.replace(/```json|```/g, '').trim();
+      try {
+        return JSON.parse(clean);
+      } catch (parseErr) {
+        throw new Error('The response was unexpected. Try again — if it persists, try a narrower page range.');
+      }
+    }
+
+    // ===== Results rendering =====
+    function goToResults() {
+      setupState.classList.add('hidden');
+      resultsState.classList.remove('hidden');
+      renderSummaryBar();
+      renderBookMeta();
+      renderTakeaways();
+      renderHowtos();
+      renderVisuals();
+      renderDrafts();
+      renderSummary();
+      // default tab
+      activateTab('takeaways');
+      window.scrollTo(0, 0);
+    }
+
+    function focusLabel() {
+      if (usedPageRange) return `pages ${usedPageRange.from}–${usedPageRange.to}`;
+      if (usedSectionName) return usedSectionName;
+      return null;
+    }
+
+    function renderSummaryBar() {
+      const bar = document.getElementById('summary-bar');
+      bar.innerHTML = '';
+      const info = document.createElement('div');
+      info.className = 'summary-info';
+      let parts = [`<strong>${escapeHtml(selectedFile.name)}</strong>`];
+      const fl = focusLabel();
+      if (fl) parts.push(escapeHtml(fl));
+      parts.push(escapeHtml(topicSelect.value));
+      info.innerHTML = parts.join(' · ');
+      const startOver = document.createElement('button');
+      startOver.className = 'btn-ghost start-over';
+      startOver.textContent = 'Start over';
+      startOver.addEventListener('click', startOverReset);
+      bar.appendChild(info);
+      bar.appendChild(startOver);
+    }
+
+    function renderBookMeta() {
+      const el = document.getElementById('book-meta');
+      el.innerHTML = '';
+      const title = document.createElement('h2');
+      title.className = 'book-title';
+      title.textContent = results.book_title || 'Untitled document';
+      const theme = document.createElement('p');
+      theme.className = 'core-theme';
+      theme.textContent = results.core_theme || '';
+      el.appendChild(title);
+      el.appendChild(theme);
+      const fl = focusLabel();
+      if (fl) {
+        const badge = document.createElement('span');
+        badge.className = 'focus-badge';
+        badge.textContent = 'Focused: ' + fl;
+        el.appendChild(badge);
+      }
+    }
+
+    function renderTakeaways() {
+      const panel = document.getElementById('panel-takeaways');
+      panel.innerHTML = '';
+      (results.takeaways || []).forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<span class="badge badge-takeaway">Takeaway</span>
+          <h3 class="card-title">${escapeHtml(t.title || '')}</h3>
+          <p class="card-text">${escapeHtml(t.insight || '')}</p>`;
+        panel.appendChild(card);
+      });
+    }
+
+    function renderHowtos() {
+      const panel = document.getElementById('panel-howtos');
+      panel.innerHTML = '';
+      (results.tactical_howtos || []).forEach(h => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<span class="badge badge-howto">How-to</span>
+          <h3 class="card-title">${escapeHtml(h.title || '')}</h3>
+          <p class="card-text">${escapeHtml(h.steps || '')}</p>
+          <div class="use-case">When to use: ${escapeHtml(h.use_case || '')}</div>`;
+        panel.appendChild(card);
+      });
+    }
+
+    function renderVisuals() {
+      const panel = document.getElementById('panel-visuals');
+      panel.innerHTML = '';
+      (results.visual_insights || []).forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<span class="badge badge-visual">Visual insight</span>
+          <h3 class="card-title">${escapeHtml(v.title || '')}</h3>
+          <p class="card-text"><span class="card-label">What it shows:</span> ${escapeHtml(v.what_it_shows || '')}</p>
+          <p class="card-text"><span class="card-label">Actionable lesson:</span> ${escapeHtml(v.actionable_lesson || '')}</p>`;
+        panel.appendChild(card);
+      });
+    }
+
+    function renderDrafts() {
+      const panel = document.getElementById('panel-drafts');
+      panel.innerHTML = '';
+      (results.linkedin_drafts || []).forEach((d, i) => {
+        const fullText = (d.hook || '') + '\n\n' + (d.body || '') + '\n\n' + (d.cta || '');
+
+        const wrap = document.createElement('div');
+        wrap.className = 'draft-panel';
+
+        const inner = document.createElement('div');
+        inner.className = 'draft-inner';
+
+        const label = document.createElement('div');
+        label.className = 'draft-label';
+        label.id = `draft-label-${i}`;
+        label.textContent = `Draft ${i + 1}`;
+
+        const post = document.createElement('div');
+        post.className = 'post-area';
+        post.id = `post-${i}`;
+        post.setAttribute('contenteditable', 'true');
+        post.textContent = fullText;
+
+        const actions = document.createElement('div');
+        actions.className = 'draft-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn-ghost';
+        copyBtn.id = `copy-btn-${i}`;
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', () => copyPost(i));
+
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'btn-ghost';
+        exportBtn.textContent = 'Export .txt';
+        exportBtn.addEventListener('click', () => exportPost(i));
+
+        const angleBtn = document.createElement('button');
+        angleBtn.className = 'btn-ghost';
+        angleBtn.id = `angle-btn-${i}`;
+        angleBtn.textContent = 'Add my angle ✦';
+        angleBtn.addEventListener('click', () => openAngleEditor(i));
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(exportBtn);
+        actions.appendChild(angleBtn);
+
+        inner.appendChild(label);
+        inner.appendChild(post);
+        inner.appendChild(actions);
+
+        // Angle editor
+        const editor = document.createElement('div');
+        editor.className = 'angle-editor';
+        editor.id = `angle-editor-${i}`;
+        editor.innerHTML = `
+          <div class="angle-editor-label">Add your personal angle</div>
+          <div class="angle-question">What's your take on this?</div>
+          <textarea id="angle-text-${i}" rows="3" placeholder="e.g. I've seen this fail when teams skip the discovery phase — here's what I'd add…"></textarea>
+          <div class="angle-error" id="angle-error-${i}">Rewrite failed. Try again.</div>
+          <div class="angle-actions">
+            <button class="btn-ghost" id="cancel-btn-${i}">Cancel</button>
+            <button class="btn-primary" id="rewrite-btn-${i}">Rewrite with my angle →</button>
+          </div>`;
+
+        wrap.appendChild(inner);
+        wrap.appendChild(editor);
+        panel.appendChild(wrap);
+
+        document.getElementById(`cancel-btn-${i}`).addEventListener('click', () => closeAngleEditor(i));
+        document.getElementById(`rewrite-btn-${i}`).addEventListener('click', () => {
+          const currentText = document.getElementById(`post-${i}`).innerText;
+          const userAngle = document.getElementById(`angle-text-${i}`).value;
+          rewriteWithAngle(i, currentText, userAngle);
+        });
+      });
+    }
+
+    // ===== Tabs =====
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => activateTab(tab.dataset.tab));
+    });
+
+    // Summary + ChatGPT infographic prompt
+    function renderSummary() {
+      const panel = document.getElementById('panel-summary');
+      panel.innerHTML = '';
+
+      const summary = results.executive_summary || 'No summary was returned for this analysis.';
+      const prompt = results.infographic_prompt || 'No infographic prompt was returned for this analysis.';
+
+      // --- Summary card ---
+      const card1 = document.createElement('div');
+      card1.className = 'card';
+
+      const head1 = document.createElement('div');
+      head1.className = 'block-head';
+      const badge1 = document.createElement('span');
+      badge1.className = 'badge badge-summary';
+      badge1.style.marginBottom = '0';
+      badge1.textContent = 'Summary';
+      const t1 = document.createElement('h3');
+      t1.className = 'card-title';
+      t1.textContent = focusLabel() ? 'Main takeaways — ' + focusLabel() : 'Main takeaways';
+      const copy1 = document.createElement('button');
+      copy1.className = 'btn-ghost inline-copy';
+      copy1.textContent = 'Copy';
+      const summaryEl = document.createElement('div');
+      summaryEl.className = 'summary-text';
+      summaryEl.setAttribute('contenteditable', 'true');
+      summaryEl.textContent = summary;
+      copy1.addEventListener('click', () => copyText(summaryEl.innerText, copy1, 'Copy'));
+
+      head1.appendChild(badge1);
+      head1.appendChild(t1);
+      head1.appendChild(copy1);
+      card1.appendChild(head1);
+      card1.appendChild(summaryEl);
+
+      // --- Infographic prompt card ---
+      const card2 = document.createElement('div');
+      card2.className = 'card';
+
+      const head2 = document.createElement('div');
+      head2.className = 'block-head';
+      const t2 = document.createElement('h3');
+      t2.className = 'card-title';
+      t2.textContent = 'ChatGPT infographic prompt';
+      const copy2 = document.createElement('button');
+      copy2.className = 'btn-ghost inline-copy';
+      copy2.textContent = 'Copy prompt';
+      const promptEl = document.createElement('div');
+      promptEl.className = 'prompt-box';
+      promptEl.setAttribute('contenteditable', 'true');
+      promptEl.textContent = prompt;
+      copy2.addEventListener('click', () => copyText(promptEl.innerText, copy2, 'Copy prompt'));
+
+      const hint = document.createElement('div');
+      hint.className = 'prompt-hint';
+      hint.textContent = 'Paste into ChatGPT (GPT-4o image generation), DALL·E, or any AI image tool to produce a LinkedIn-ready infographic of the takeaways above. Edit it inline first if you like.';
+
+      head2.appendChild(t2);
+      head2.appendChild(copy2);
+      card2.appendChild(head2);
+      card2.appendChild(promptEl);
+      card2.appendChild(hint);
+
+      panel.appendChild(card1);
+      panel.appendChild(card2);
+    }
+
+    function activateTab(name) {
+      document.querySelectorAll('.tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tab === name));
+      document.querySelectorAll('.tab-panel').forEach(p =>
+        p.classList.toggle('active', p.id === 'panel-' + name));
+    }
+
+    // ===== Draft actions =====
+    async function copyPost(index) {
+      const text = document.getElementById(`post-${index}`).innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (e) {
+        console.error('Clipboard failed', e);
+      }
+      const btn = document.getElementById(`copy-btn-${index}`);
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    }
+
+    // Generic copy helper (summary / infographic prompt)
+    async function copyText(text, btn, label) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (e) {
+        console.error('Clipboard failed', e);
+      }
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = label; }, 1500);
+    }
+
+    function exportPost(index) {
+      const text = document.getElementById(`post-${index}`).innerText;
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `linkedin-draft-${index + 1}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function openAngleEditor(index) {
+      const editor = document.getElementById(`angle-editor-${index}`);
+      const post = document.getElementById(`post-${index}`);
+      const errEl = document.getElementById(`angle-error-${index}`);
+      errEl.classList.remove('show');
+      editor.classList.add('open');
+      post.classList.add('dimmed');
+      post.setAttribute('contenteditable', 'false');
+    }
+
+    function closeAngleEditor(index) {
+      const editor = document.getElementById(`angle-editor-${index}`);
+      const post = document.getElementById(`post-${index}`);
+      editor.classList.remove('open');
+      post.classList.remove('dimmed');
+      post.setAttribute('contenteditable', 'true');
+      document.getElementById(`angle-error-${index}`).classList.remove('show');
+    }
+
+    function showAngleError(index, message) {
+      const errEl = document.getElementById(`angle-error-${index}`);
+      errEl.textContent = message;
+      errEl.classList.add('show');
+    }
+
+    function markAsPersonalized(index) {
+      const label = document.getElementById(`draft-label-${index}`);
+      if (label.querySelector('.badge-personalized')) return;
+      label.textContent = `Draft ${index + 1}`;
+      const badge = document.createElement('span');
+      badge.className = 'badge badge-personalized';
+      badge.textContent = 'Personalized';
+      label.appendChild(badge);
+    }
+
+    async function rewriteWithAngle(draftIndex, currentText, userAngle) {
+      const btn = document.getElementById(`rewrite-btn-${draftIndex}`);
+      document.getElementById(`angle-error-${draftIndex}`).classList.remove('show');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Rewriting...';
+
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-opus-4-5',
+            max_tokens: 1000,
+            messages: [{
+              role: 'user',
+              content: buildPersonalizationPrompt(currentText, userAngle)
+            }]
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+        const rewritten = data.content
+          .filter(b => b.type === 'text')
+          .map(b => b.text)
+          .join('')
+          .trim();
+
+        document.getElementById(`post-${draftIndex}`).innerText = rewritten;
+
+        closeAngleEditor(draftIndex);
+        markAsPersonalized(draftIndex);
+
+      } catch (e) {
+        showAngleError(draftIndex, 'Rewrite failed. Try again.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Rewrite with my angle →';
+      }
+    }
+
+    // ===== Reset =====
+    function startOverReset() {
+      // clear results DOM
+      results = null;
+      usedPageRange = null;
+      usedSectionName = null;
+      pdfBase64 = null;
+      totalPages = null;
+      selectedFile = null;
+
+      fileInput.value = '';
+      fileBadgeWrap.innerHTML = '';
+      pageCountText.textContent = '';
+      fileSizeWarning.textContent = '';
+      fileTypeError.textContent = '';
+      pageFromInput.value = '';
+      pageToInput.value = '';
+      sectionNameInput.value = '';
+      pageRangeError.textContent = '';
+      rangePillWrap.innerHTML = '';
+
+      // apiKey is NOT cleared; topic/audience retain values
+      clearErrorBanner();
+      resetProgressUI();
+
+      document.getElementById('panel-takeaways').innerHTML = '';
+      document.getElementById('panel-howtos').innerHTML = '';
+      document.getElementById('panel-visuals').innerHTML = '';
+      document.getElementById('panel-drafts').innerHTML = '';
+      document.getElementById('panel-summary').innerHTML = '';
+
+      resultsState.classList.add('hidden');
+      setupState.classList.remove('hidden');
+      updateAnalyzeButton();
+      window.scrollTo(0, 0);
+    }
+
+    // ===== Util =====
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // init
+    updateAnalyzeButton();
+  </script>
+</body>
+</html>

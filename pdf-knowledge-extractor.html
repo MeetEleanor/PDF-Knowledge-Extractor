@@ -1151,11 +1151,22 @@ All content must be grounded in the actual PDF — no invented content, no gener
         if (response.status === 401) throw new Error('Invalid API key. Check your key and try again.');
         if (response.status === 429) throw new Error('Rate limited. Wait a moment and try again.');
         let bodyMsg = '';
-        try { const ej = await response.json(); bodyMsg = ej.error?.message || ''; } catch (e) {}
-        if (response.status === 413 || /too large|max_tokens|exceed|context/i.test(bodyMsg)) {
+        try {
+          const ej = await response.json();
+          bodyMsg = (ej.error && ej.error.message) || '';
+          console.error('Anthropic API error', response.status, ej);
+        } catch (e) {
+          console.error('Anthropic API error', response.status, '(no JSON body)');
+        }
+        // Only call it a size problem when the API actually says so.
+        if (response.status === 413 ||
+            /too large|request too large|exceed|context window|prompt is too long/i.test(bodyMsg)) {
           throw new Error('This content may be too large for a single analysis. Try a narrower page range.');
         }
-        throw new Error('This content may be too large for a single analysis. Try a narrower page range.');
+        // Otherwise surface the real error instead of guessing.
+        throw new Error(bodyMsg
+          ? `API error (${response.status}): ${bodyMsg}`
+          : `API request failed (HTTP ${response.status}). Open the browser console for details.`);
       }
 
       const data = await response.json();

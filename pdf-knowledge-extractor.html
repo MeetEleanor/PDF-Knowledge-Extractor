@@ -1332,6 +1332,8 @@ Requirements:
           <h3 class="card-title">${escapeHtml(v.title || '')}</h3>
           <p class="card-text"><span class="card-label">What it shows:</span> ${escapeHtml(v.what_it_shows || '')}</p>
           <p class="card-text"><span class="card-label">Actionable lesson:</span> ${escapeHtml(v.actionable_lesson || '')}</p>`;
+        const visualContent = 'What it shows: ' + (v.what_it_shows || '') + ' Actionable lesson: ' + (v.actionable_lesson || '');
+        attachInfographicTools(card, v.title || '', visualContent);
         panel.appendChild(card);
       });
     }
